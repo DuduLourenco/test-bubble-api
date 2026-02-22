@@ -12,9 +12,22 @@ app.set('query parser', 'extended');
 app.use(cors());
 app.use(express.json());
 
-// Load data from output.json and filter out empty rows
-const offersData = JSON.parse(fs.readFileSync('./output.json', 'utf8'))
-  .filter(item => item.sku_id !== null);
+// Data file path from environment or default
+const DATA_FILE = process.env.DATA_FILE || './output.json';
+
+/**
+ * Helper to load and filter data from the JSON file
+ */
+const getOffersData = () => {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return [];
+    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'))
+      .filter(item => item.sku_id !== null);
+  } catch (error) {
+    console.error(`Error loading ${DATA_FILE}:`, error.message);
+    return [];
+  }
+};
 
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -66,7 +79,7 @@ app.post('/auth/token', (req, res) => {
  * Returns filtered offers
  */
 app.get('/api/offers', authenticateToken, (req, res) => {
-  let filteredOffers = [...offersData];
+  let filteredOffers = getOffersData();
 
   // filter[field]=value
   if (req.query.filter && typeof req.query.filter === 'object') {
